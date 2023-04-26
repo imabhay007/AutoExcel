@@ -1,0 +1,95 @@
+import os
+from openpyxl import load_workbook
+from openpyxl.styles import Alignment
+from unidecode import unidecode
+import tkinter as tk
+from tkinter import filedialog
+
+
+def extract_data():
+    file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+
+    wb = load_workbook(file_path)
+    ws = wb.active
+
+    # directory to save the text files
+    output_dir = 'text_files/'
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Iterate over the rows of the Description column
+    for index, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+        # Creating text files with the name of the row index
+        file_name = os.path.join(output_dir, f"{index + 2}.txt")
+        with open(file_name, 'w', encoding='utf-8') as f:
+            text = unidecode(str(row[4]))
+            f.write(text)
+
+    # directory to read the text files from
+    input_dir = 'text_files'
+
+    headings = ['Test Environment', 'Media Device CD', 'Media Device USB', 'Media Device Apple', 'Phone',
+                'Precondition',
+                'Action', 'Observation', 'Expectation', 'Notes', 'Note', 'Observed Behavior',
+                'Expected Behavior', 'Healing', 'Initial Conditions', 'Steps to reproduce', 'Pre -Condition',
+                'Requirement reference', 'Expected Result']
+
+    # Iterate over the rows of the Description column
+    for index, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+
+        extracted_data = ['', '', '', '']
+        current_heading = ''
+        end_of_data = False
+
+        file_name = os.path.join(input_dir, f"{index + 2}.txt")
+
+        with open(file_name, 'r', encoding='utf-8') as f:
+            for line in f:
+                # Check if the current line contains any of the headings
+                if any(x.lower() in line.lower() for x in headings):
+                    # If we've reached the end of the data for the current test case, break out of the loop
+                    if current_heading.lower() == 'expectation':
+                        end_of_data = True
+                        break
+                    # Otherwise, update the current heading
+                    current_heading = next((x for x in headings if x.lower() in line.lower()), '')
+                else:
+                    if current_heading.lower() == 'precondition' or current_heading.lower() == 'pre -condition':
+                        extracted_data[0] += line.strip() + '\n'
+                    elif current_heading.lower() == 'action':
+                        extracted_data[1] += line.strip() + '\n'
+                    elif current_heading.lower() == 'expected result':  # added condition for expected result
+                        extracted_data[2] += line.strip() + '\n'
+                    elif current_heading.lower() == 'observation' or current_heading.lower() == 'observed behavior':
+                        extracted_data[3] += line.strip() + '\n'
+
+            # Update the corresponding cells in the worksheet with the extracted data
+            ws.cell(row=index + 2, column=6).value = extracted_data[0].strip()  # Column for Precondition
+            ws.cell(row=index + 2, column=7).value = extracted_data[1].strip()  # Column for Action
+            ws.cell(row=index + 2, column=8).value = extracted_data[2].strip()  # Column for Expected Result
+            ws.cell(row=index + 2, column=9).value = extracted_data[3].strip()  # Column for Observation
+
+    # Set wrap text for all cells in the worksheet
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+    # Save data into Excel Sheet
+    wb.save(file_path)
+
+    tk.messagebox.showinfo("Complete", "Successfully updated data into the Excel Sheet")
+
+
+# Create the main window
+root = tk.Tk()
+root.title("Excel Automator")
+
+# Add a button to select
+select_button = tk.Button(root, text="Select ExcelSheet", command=extract_data,
+                          bg="blue", fg="white", font=("Helvetica", 16))
+select_button.pack(padx=10, pady=100)
+
+# Start the main event loop
+root.geometry("400x300+300+200")
+root.mainloop()
