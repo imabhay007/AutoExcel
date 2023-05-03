@@ -1,0 +1,261 @@
+import os
+from openpyxl import load_workbook
+from openpyxl.styles import Alignment
+from unidecode import unidecode
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from tkinter import filedialog
+
+testtype_input = ""
+precondition_input = ""
+action_input = ""
+expectation_input = ""
+observation_input = ""
+
+# Path for file
+
+file_path = ""
+
+
+def select_file():
+    global file_path
+    file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+
+    file_label.config(text=file_path)
+
+
+def set_column():
+    global testtype_input, precondition_input, action_input, expectation_input, observation_input
+
+    testtype_input = testtype_entry.get()
+    precondition_input = precondition_entry.get()
+    action_input = action_entry.get()
+    expectation_input = expectation_entry.get()
+    observation_input = observation_entry.get()
+
+    tk.messagebox.showinfo("Complete", "Column has been set")
+
+
+def extract_data():
+    if not precondition_input or not action_input or not expectation_input or not observation_input:
+        messagebox.showerror("Error", "Please set all column values first.")
+    else:
+        # file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+        wb = load_workbook(file_path)
+        ws = wb.active
+
+        # directory to save the text files
+        output_dir = 'text_files/'
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # Iterate over the rows of the Description column
+        for index, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+            # Creating text files with the name of the row index
+            file_name = os.path.join(output_dir, f"{index + 2}.txt")
+            with open(file_name, 'w', encoding='utf-8') as f:
+                text = unidecode(str(row[2]))
+
+                words = ['Test Environment', 'Media Device CD', 'Media Device USB', 'Media Device Apple', 'Phone',
+                         'Precondition', 'Actions', 'Action', 'Observation', 'Expectation', 'Notes', 'Note',
+                         'Observed Behavior',
+                         'Expected Behavior', 'Healing', 'Initial Conditions', 'Steps to reproduce', 'Pre -Condition',
+                         'Requirement reference', 'Expected Result', 'Test Steps', 'Operation', 'Pre-Condition',
+                         'Trigger', 'Steps to Reproduce', 'Customer Ticket', 'Initial conditions', 'Operation',
+                         'Failure Type', 'Attachment info', 'External Devices Details', 'External devices connected',
+                         'Requirement reference', 'Initials Conditions', 'Exit Conditions', 'User Effect', 'Comment',
+                         'Occurence', 'Addition', 'Affects Version', 'Clearing', 'Environment for A-IVI', 'Description',
+                         'Observed Behaviour', 'Reporter', 'Pre-condition', 'CAN Configurations',
+                         'Pre-conditions', 'Use-case', 'Time Stamp', 'Test-type', 'Connected External components',
+                         'Data Carrier', '(Bench/ In-car / Drive / Automated / EIPF)', 'Configuration']
+                # Iterate over the words and replace ":" and "*" with a new line whenever they appear after the word
+                for word in words:
+                    text = text.replace("Actions", "Action").replace("Observations", "Observation") \
+                        .replace("Expectations", "Expectation").replace("Preconditions", "Precondition") \
+                        .replace("Test-types", 'Test-type')
+                    text = text.replace("Pre -Condition", 'Precondition').replace("Pre-Condition", 'Precondition')\
+                        .replace("Pre-conditions", 'Precondition')
+
+                    text = text.replace("{color:red} !!!", '').replace("{color}", '').replace("{color:#59afe1}", '')
+                    text = text.replace("{color:#f79232}", '').replace("{color:#d04437}", '').replace("{color:#14892c}", '')
+                    text = text.replace("{color:#de350b}", '').replace("{color:#ffbdad}", '').replace("{color}*", '')
+                    text = text.replace("*{color}", '').replace("{color:#0747a6}", '').replace("*{color:#59afe1}", '')
+                    text = text.replace("{color:#59afe1}*", '').replace("{color:#f79232}*", '').replace("*{color:#f79232}", '')
+
+                    text = text.replace("{color:#d04437}*", '').replace("*{color:#d04437}", '').replace("{color:#ffbdad}*", '')
+                    text = text.replace("*{color:#ffbdad}", '').replace("{color}:", '').replace("{color} :", '')
+                    text = text.replace("{color:blue}", '').replace("{color:blue}*", '').replace("*{color:blue}*", '')
+                    text = text.replace("(Bench/ In-car / Drive / Automated / EIPF) :", '').replace("(Bench/ In-car / Drive / Automated / EIPF):", '')
+
+                    text = text.replace("(Bench/ In-car / Drive / Automated / EIPF)", '').replace("(Bench, car...) :", '').replace("(Bench, car...):", '')
+
+                    text = text.replace(word + ':', word + '').replace(word + ' :', word + '') \
+                        .replace(':' + word, word + '').replace(': ' + word, word + '')
+
+                    text = text.replace(word + '*', word + '').replace(word + ' *', word + '') \
+                        .replace('*' + word, word + '').replace('* ' + word, word + '')
+
+                    text = text.replace('[' + word + ']', word).replace('*[' + word + ']*', word)
+
+                    text = text.replace(word, '\n' + word + '\n')
+                    text = text.replace('&#13;&#10;', '').replace('&amp;gt;', '>').replace('&amp;#126;', '~')
+                    text = text.replace('\\', '\n')
+                    text = text.replace('h4.', "").replace("&amp;", '')
+
+                f.write(text)
+
+        # directory to read the text files from
+        input_dir = 'text_files'
+
+        headings = ['Test Environment', 'Media Device CD', 'Media Device USB', 'Media Device Apple',
+                    'Precondition', 'Action', 'Observation', 'Expectation', 'Notes', 'Note', 'Observed Behavior',
+                    'Expected Behavior', 'Healing', 'Initial Conditions', 'Steps to reproduce', 'Pre -Condition',
+                    'Requirement reference', 'Expected Result', 'Test Steps', 'Operation', 'Pre-Condition',
+                    'Steps to Reproduce', 'Customer Ticket', 'Initial conditions', 'Operation',
+                    'Failure Type', 'Attachment info', 'External Devices Details', 'External devices connected',
+                    'Requirement reference', 'Initials Conditions', 'Exit Conditions', 'User Effect', 'Comment',
+                    'Occurence', 'Addition', 'Affects Version', 'Clearing', 'Environment for A-IVI', 'Description',
+                    'Observed Behaviour', 'Reporter', 'Pre-conditions', 'Use-case', 'Time Stamp', 'Customer effect',
+                    'Exit Condition', 'Test-type', 'Configuration', 'Connected External components', 'Data Carrier']
+
+        # Iterate over the rows of the Description column
+        for index, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+
+            extracted_data = ['', '', '', '', '']
+            current_heading = ''
+            end_of_data = False
+
+            file_name = os.path.join(input_dir, f"{index + 2}.txt")
+
+            with open(file_name, 'r', encoding='utf-8') as f:
+                for line in f:
+                    # Check if the current line contains any of the headings
+                    if any(x.lower() in line.lower() for x in headings):
+                        # If we've reached the end of the data for the current test case, break out of the loop
+                        # if current_heading.lower() == 'expectation':
+                        #     end_of_data = True
+                        #     break
+                        # Otherwise, update the current heading
+                        current_heading = next((x for x in headings if x.lower() in line.lower()), '')
+                    else:
+                        if current_heading.lower() == 'precondition' or current_heading.lower() == 'pre -condition' or \
+                                current_heading.lower() == 'pre-condition' or current_heading.lower() == 'pre-conditions':
+                            extracted_data[0] += line.strip() + '\n'
+                        elif current_heading.lower() == 'initial conditions' or current_heading.lower() == 'initials conditions':
+                            extracted_data[0] += line.strip() + '\n'
+                        elif current_heading.lower() == 'action' or current_heading.lower() == 'steps to reproduce':
+                            extracted_data[1] += line.strip() + '\n'
+                        elif current_heading.lower() == 'test steps' or current_heading.lower() == 'operation' or \
+                                current_heading.lower() == 'actions' or current_heading.lower() == 'use-case':
+                            extracted_data[1] += line.strip() + '\n'
+                        elif current_heading.lower() == 'expectation' or current_heading.lower() == 'expected' or \
+                                current_heading.lower() == 'expected behavior':
+                            extracted_data[2] += line.strip() + '\n'
+                        elif current_heading.lower() == 'observation' or current_heading.lower() == 'observed behavior':
+                            extracted_data[3] += line.strip() + '\n'
+                        elif current_heading.lower() == 'observed behaviour' or current_heading.lower() == 'observed':
+                            extracted_data[3] += line.strip() + '\n'
+                        elif current_heading.lower() == 'test-type':
+                            extracted_data[4] += line.strip() + '\n'
+
+                # Update the corresponding cells in the worksheet with the extracted data
+
+                ws.column_dimensions[ws.cell(row=1, column=int(precondition_input)).column_letter].width = 35
+                ws.cell(row=1, column=int(testtype_input)).value = 'Test Type'
+                ws.cell(row=index + 2, column=int(testtype_input)).value = extracted_data[4].strip()  # Test Type
+
+                ws.column_dimensions[ws.cell(row=1, column=int(precondition_input)).column_letter].width = 35
+                ws.cell(row=1, column=int(precondition_input)).value = 'TC-Precondition'
+                ws.cell(row=index + 2, column=int(precondition_input)).value = extracted_data[0].strip()  # Precondition
+
+                ws.column_dimensions[ws.cell(row=1, column=int(action_input)).column_letter].width = 35
+                ws.cell(row=1, column=int(action_input)).value = 'TC-Action'
+                ws.cell(row=index + 2, column=int(action_input)).value = extracted_data[1].strip()  # Column for Action
+
+                ws.column_dimensions[ws.cell(row=1, column=int(expectation_input)).column_letter].width = 35
+                ws.cell(row=1, column=int(expectation_input)).value = 'TC-Expected-Results'
+                ws.cell(row=index + 2, column=int(expectation_input)).value = extracted_data[
+                    2].strip()  # for Expected Result
+
+                ws.column_dimensions[ws.cell(row=1, column=int(observation_input)).column_letter].width = 35
+                ws.cell(row=1, column=int(observation_input)).value = 'Ticket-Observation'
+                ws.cell(row=index + 2, column=int(observation_input)).value = extracted_data[3].strip()  # Observation
+
+        # Set wrap text for all cells in the worksheet
+        for row in ws.iter_rows():
+            for cell in row:
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+        # Save data into Excel Sheet
+        wb.save(file_path)
+
+        tk.messagebox.showinfo("Complete", "Successfully updated data into the Excel Sheet")
+
+
+# Create the main window
+root = tk.Tk()
+root.configure(bg="#394867")
+root.title("Excel Automator")
+
+# Create a button that calls select_file() when clicked
+select_button = tk.Button(root, text="Select File", command=select_file, font=("Helvetica", 14), bg='#93C6E7')
+select_button.grid(row=0, column=8, padx=10, pady=10, sticky="e")
+
+# Add a label to display the selected file's path
+file_label = tk.Label(root, text="", font=("Helvetica", 10), wraplength=500)
+file_label.grid(row=0, padx=10, pady=10, sticky="w", columnspan=6)
+
+# Label for Test Type Column
+testtype_label = tk.Label(root, text="Enter Column for Test Type:", font=("Helvetica", 14), bg='#C0DBEA')
+testtype_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+# Entry widget for Test Type Column
+testtype_entry = tk.Entry(root)
+testtype_entry.grid(row=1, column=8, padx=10, pady=10)
+
+# Label for Precondition Column
+precondition_label = tk.Label(root, text="Enter Column for Precondition:", font=("Helvetica", 14), bg='#C0DBEA')
+precondition_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+
+# Entry widget for Precondition Column
+precondition_entry = tk.Entry(root)
+precondition_entry.grid(row=2, column=8, padx=10, pady=10)
+
+# Label for Action Column
+action_label = tk.Label(root, text="Enter Column for Action:", font=("Helvetica", 14), bg='#C0DBEA')
+action_label.grid(row=3, column=0, padx=10, pady=10, sticky="w")
+
+# Entry widget for Action Column
+action_entry = tk.Entry(root)
+action_entry.grid(row=3, column=8, padx=10, pady=10)
+
+# Label for Expectation Column
+expectation_label = tk.Label(root, text="Enter Column for Expectation:", font=("Helvetica", 14), bg='#C0DBEA')
+expectation_label.grid(row=4, column=0, padx=10, pady=10, sticky="w")
+
+# Entry widget for Expectation Column
+expectation_entry = tk.Entry(root)
+expectation_entry.grid(row=4, column=8, padx=10, pady=10)
+
+# Label for Observation Column
+observation_label = tk.Label(root, text="Enter Column for Observation:", font=("Helvetica", 14), bg='#C0DBEA')
+observation_label.grid(row=5, column=0, padx=10, pady=10, sticky="w")
+
+# Entry widget for Observation Column
+observation_entry = tk.Entry(root)
+observation_entry.grid(row=5, column=8, padx=10, pady=10)
+
+# Set Column Button
+set_column = tk.Button(root, text="Set Column", command=set_column, font=("Helvetica", 14), bg="#9BA4B5", fg="white")
+set_column.grid(row=6, column=1, padx=10, pady=20)
+
+# Add a button to extract the data
+extract_button = tk.Button(root, text="Extract Data", command=extract_data,
+                           bg="#0A2647", fg="white", font=("Helvetica", 14))
+extract_button.grid(row=7, column=1, padx=10, pady=20, sticky="e")
+
+# Start the main loop
+# root.geometry("800x500+300+200")
+root.mainloop()
